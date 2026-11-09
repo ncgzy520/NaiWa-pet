@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>奶蛙 (Naiwa) 云端桌面宠物乐园</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="flex flex-col items-center justify-between min-h-screen p-3 md:p-5 pb-24 md:pb-6">
+
+  <!-- ================= TOP HEADER (Pet Info, EXP Bar, Daily EXP Cap & Daily Coin Cap) ================= -->
+  <header class="w-full max-w-xl glass-panel p-3.5 flex flex-col gap-2.5 shadow-md">
+    <div class="flex items-center justify-between gap-2">
+      <!-- Pet Avatar & Name -->
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-amber-300 flex items-center justify-center text-2xl shadow-inner border-2 border-amber-400">
+          🐸
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="header-pet-name" class="font-extrabold text-lg text-stone-900 tracking-tight">小奶蛙</h1>
+            <button id="btn-rename" class="text-xs text-stone-400 hover:text-stone-700 transition" title="改名">✏️</button>
+            <span id="header-level" class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-stone-900 shadow-sm">Lv.1</span>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-semibold text-stone-600 mt-0.5">
+            <span>🪙 <strong id="header-coins" class="text-amber-600">300</strong> 币</span>
+            <span>⚖️ 体重: <strong id="header-weight" class="text-stone-800">20.0 kg</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Coin Cap Badge & Account Switcher -->
+      <div class="flex flex-col items-end gap-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold text-stone-600 bg-amber-100/90 px-2 py-0.5 rounded-lg border border-amber-300">
+            👤 <span id="header-owner-name">游客主人</span>
+          </span>
+          <button id="btn-switch-account" class="text-xs font-bold px-2.5 py-0.5 rounded-lg bg-stone-800 hover:bg-stone-900 text-amber-300 shadow-sm transition">
+            账号/注册
+          </button>
+        </div>
+        <div class="text-xs font-bold text-stone-600 bg-white/85 px-2.5 py-1 rounded-xl border border-amber-200 shadow-sm">
+          🪙 今日获取金币上限: <strong id="header-daily-coins" class="text-amber-600">0 / 300</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXP Progress Bar & Daily EXP Cap Indicator -->
+    <div class="w-full bg-amber-100/70 rounded-xl p-2 border border-amber-200/80 flex flex-col gap-1">
+      <div class="flex items-center justify-between text-xs font-bold">
+        <span class="text-amber-900 flex items-center gap-1">
+          ⭐ 升级经验: <strong id="header-exp-text" class="text-amber-700">0 / 100</strong>
+        </span>
+        <span class="text-stone-600 bg-white/85 px-2 py-0.5 rounded-lg border border-amber-200">
+          📅 今日获取经验上限: <strong id="header-daily-exp" class="text-emerald-700">0 / 500</strong>
+        </span>
+      </div>
+      <div class="w-full h-2.5 bg-stone-200/80 rounded-full overflow-hidden">
+        <div id="bar-exp" class="h-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-300" style="width: 0%;"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN STAGE (Naiwa Pet Display) ================= -->
+  <main class="w-full max-w-xl flex flex-col items-center my-auto relative">
+
+    <!-- Sleep Countdown & Recovery Banner -->
+    <div id="sleep-info-banner" class="hidden w-full mt-2 p-3 rounded-2xl bg-indigo-950/90 border-2 border-indigo-400/60 text-indigo-100 shadow-lg text-xs">
+      <div class="flex items-center justify-between font-bold">
+        <span class="flex items-center gap-1.5 text-amber-300 text-sm">
+          🌙 奶蛙静止安睡恢复中...
+        </span>
+        <span id="sleep-wake-clock" class="bg-indigo-800/90 px-2.5 py-1 rounded-lg text-indigo-200">
+          预计 --:-- 恢复满格
+        </span>
+      </div>
+      <div class="mt-1.5 flex items-center justify-between text-indigo-200">
+        <span id="sleep-countdown-text">⏳ 距离满精力还需计算中...</span>
+        <span class="text-emerald-300 font-semibold">恢复速率：+10 精力/分钟</span>
+      </div>
+    </div>
+
+    <!-- Pet Stage Box -->
+    <div class="pet-stage-container my-1">
+      <!-- Floating Speech Bubble -->
+      <div id="speech-bubble" class="speech-bubble">
+        我的大肚肚真的很酷酷！戳我肚皮有 6 种爆笑形态哦~ 呱哈哈！
+      </div>
+
+      <!-- High-performance 2D Canvas -->
+      <canvas id="pet2d-canvas" width="380" height="420"></canvas>
+    </div>
+
+    <!-- 6-Form NWP Morph Quick Switcher Bar -->
+    <div class="w-full px-1 mb-2">
+      <div class="flex items-center justify-between bg-white/75 backdrop-blur px-2.5 py-1.5 rounded-2xl border border-amber-200/80 shadow-sm gap-1 overflow-x-auto">
+        <span class="text-[11px] font-extrabold text-stone-500 shrink-0">🎭 戳肚形态:</span>
+        <button class="pose-pill-btn active px-2 py-1 rounded-lg text-[11px] font-bold bg-amber-400 text-stone-900 shrink-0 transition" data-pose="0">1.仰头抚肚</button>
+        <button class="pose-pill-btn px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-600 hover:bg-amber-100 shrink-0 transition" data-pose="1">2.弯腰捧腹</button>
+        <button class="pose-pill-btn px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-600 hover:bg-amber-100 shrink-0 transition" data-pose="2">3.挺肚摇摆</button>
+        <button class="pose-pill-btn px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-600 hover:bg-amber-100 shrink-0 transition" data-pose="3">4.抱头笑疯</button>
+        <button class="pose-pill-btn px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-600 hover:bg-amber-100 shrink-0 transition" data-pose="4">5.前仰后合</button>
+        <button class="pose-pill-btn px-2 py-1 rounded-lg text-[11px] font-semibold bg-stone-100 text-stone-600 hover:bg-amber-100 shrink-0 transition" data-pose="5">6.躺地打滚</button>
+      </div>
+    </div>
+
+    <!-- Quick Interaction Action Tabs -->
+    <div class="w-full grid grid-cols-5 gap-2 px-1 my-1">
+      <button id="btn-poke" class="action-btn primary" data-mode="poke">
+        <span class="text-2xl">👉</span>
+        <span>戳大肚皮</span>
+      </button>
+      <button id="btn-feed" class="action-btn" data-mode="feed">
+        <span class="text-2xl">🍢</span>
+        <span>投喂零食</span>
+      </button>
+      <button id="btn-exercise" class="action-btn" data-mode="exercise">
+        <span class="text-2xl">🏃</span>
+        <span>跳操减肥</span>
+      </button>
+      <button id="btn-clean" class="action-btn" data-mode="clean">
+        <span class="text-2xl">🛁</span>
+        <span>泡澡搓身</span>
+      </button>
+      <button id="btn-sleep" class="action-btn" data-mode="sleep">
+        <span class="text-2xl">🌙</span>
+        <span id="btn-sleep-text">关灯睡觉</span>
+      </button>
+    </div>
+
+    <!-- Status Progress Bars Panel -->
+    <div class="w-full glass-panel p-3.5 mt-1.5 grid grid-cols-2 gap-3 shadow-md">
+      <!-- Hunger -->
+      <div class="stat-bar-container">
+        <span>🍗 饱腹</span>
+        <div class="stat-track">
+          <div id="bar-hunger" class="stat-fill" style="width: 80%; background-color: #FA5252;"></div>
+        </div>
+        <span class="stat-value text-xs text-stone-600 w-12 text-right">80/100</span>
+      </div>
+
+      <!-- Mood -->
+      <div class="stat-bar-container">
+        <span>💖 心情</span>
+        <div class="stat-track">
+          <div id="bar-mood" class="stat-fill" style="width: 85%; background-color: #40C057;"></div>
+        </div>
+        <span class="stat-value text-xs text-stone-600 w-12 text-right">85/100</span>
+      </div>
+
+      <!-- Cleanliness -->
+      <div class="stat-bar-container">
+        <span>✨ 清洁</span>
+        <div class="stat-track">
+          <div id="bar-clean" class="stat-fill" style="width: 90%; background-color: #228BE6;"></div>
+        </div>
+        <span class="stat-value text-xs text-stone-600 w-12 text-right">90/100</span>
+      </div>
+
+      <!-- Energy -->
+      <div class="stat-bar-container">
+        <span>⚡ 精力</span>
+        <div class="stat-track">
+          <div id="bar-energy" class="stat-fill" style="width: 90%; background-color: #FAB005;"></div>
+        </div>
+        <span class="stat-value text-xs text-stone-600 w-12 text-right">90/100</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= BOTTOM NAVIGATION TOOLBAR ================= -->
+  <nav class="w-full max-w-xl glass-panel p-2 flex justify-around items-center shadow-lg fixed md:static bottom-3 z-40">
+    <button id="nav-shop" class="flex flex-col items-center py-1 px-3 text-stone-700 hover:text-amber-600 transition">
+      <span class="text-2xl">🏪</span>
+      <span class="text-xs font-bold mt-0.5">美食商城</span>
+    </button>
+    <button id="nav-minigame" class="flex flex-col items-center py-1 px-3 text-stone-700 hover:text-amber-600 transition">
+      <span class="text-2xl">🎮</span>
+      <span class="text-xs font-bold mt-0.5">赚币小游戏</span>
+    </button>
+    <button id="nav-social" class="flex flex-col items-center py-1 px-3 text-stone-700 hover:text-amber-600 transition">
+      <span class="text-2xl">🏆</span>
+      <span class="text-xs font-bold mt-0.5">大肚王排行</span>
+    </button>
+    <button id="nav-ai-chat" class="flex flex-col items-center py-1 px-3 text-stone-700 hover:text-amber-600 transition">
+      <span class="text-2xl">💬</span>
+      <span class="text-xs font-bold mt-0.5">AI 畅聊</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODALS & DRAWERS ================= -->
+
+  <!-- 1. Food Shop & Feeding Modal (Pure Food Store, Single vs Batch Feed Mode) -->
+  <div id="modal-shop" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <h2 class="text-lg font-black text-stone-800 flex items-center gap-2">
+          <span>🍢 奶蛙夜市美食商城与投喂背包</span>
+        </h2>
+        <button class="modal-close-btn text-stone-400 hover:text-stone-700 text-xl font-bold">✕</button>
+      </div>
+
+      <!-- Single vs Batch Feeding Mode Switcher -->
+      <div id="feed-mode-bar" class="my-3 p-2.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+        <div class="text-xs font-bold text-stone-700">
+          🍽️ 投喂模式选择：
+          <span id="feed-mode-desc" class="text-[11px] font-normal text-stone-500 block">点击投喂后自动关闭窗口并在主舞台播放吃东西动画</span>
+        </div>
+        <div class="flex bg-stone-200/80 p-1 rounded-xl shrink-0">
+          <button id="btn-mode-single" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500 text-white shadow-sm transition">
+            单次投喂
+          </button>
+          <button id="btn-mode-batch" class="px-3 py-1 rounded-lg text-xs font-semibold text-stone-600 hover:text-stone-900 transition">
+            批量投喂
+          </button>
+        </div>
+      </div>
+
+      <!-- Food Items Grid -->
+      <div id="shop-items-grid" class="grid grid-cols-2 gap-3 max-h-[52vh] overflow-y-auto p-1">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 1b. Batch Feed Count Dialog -->
+  <div id="modal-batch-feed" class="modal-backdrop">
+    <div class="modal-content max-w-sm text-center">
+      <div id="batch-feed-icon" class="text-5xl mb-2">🍢</div>
+      <h3 id="batch-feed-title" class="text-lg font-black text-stone-800">批量投喂【秘制烤羊肉串】</h3>
+      <p id="batch-feed-owned" class="text-xs text-stone-500 mt-1">当前背包拥有: 5 份</p>
+
+      <div class="my-4 flex items-center justify-center gap-3">
+        <button id="batch-minus" class="w-9 h-9 rounded-xl bg-stone-200 hover:bg-stone-300 font-black text-lg">-</button>
+        <input id="batch-count-input" type="number" min="1" max="99" value="2" class="w-20 text-center py-1.5 rounded-xl border-2 border-amber-400 font-black text-lg text-stone-900">
+        <button id="batch-plus" class="w-9 h-9 rounded-xl bg-stone-200 hover:bg-stone-300 font-black text-lg">+</button>
+        <button id="batch-max" class="px-2.5 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-xs font-bold text-stone-800">最大</button>
+      </div>
+
+      <div class="flex gap-2 mt-4">
+        <button class="modal-close-btn flex-1 py-2 rounded-xl bg-stone-200 hover:bg-stone-300 font-bold text-xs text-stone-700">取消</button>
+        <button id="btn-confirm-batch-feed" class="flex-1 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow">
+          确认投喂并看动画 🍽️
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Minigames Modal -->
+  <div id="modal-minigames" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <h2 class="text-lg font-black text-stone-800 flex items-center gap-2">
+          <span>🎮 奶蛙赚金币游乐场</span>
+        </h2>
+        <button class="modal-close-btn text-stone-400 hover:text-stone-700 text-xl font-bold">✕</button>
+      </div>
+
+      <!-- Game Selection View -->
+      <div id="game-select-view" class="my-4 space-y-4">
+        <!-- Result Summary Banner (Shown when a game finishes) -->
+        <div id="minigame-result-banner" class="hidden p-3.5 rounded-2xl bg-amber-100 border-2 border-amber-400 text-center shadow-sm mb-3">
+          <div id="minigame-result-title" class="text-base font-black text-stone-900">⏰ 时间到！你点击了 0 次！</div>
+          <div id="minigame-result-sub" class="text-xs font-bold text-amber-800 mt-1"></div>
+        </div>
+
+        <div class="glass-panel p-4 border-2 border-amber-300 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base text-stone-900">🍢 奶蛙接食物大作战</h3>
+            <p class="text-xs text-stone-500 mt-1">控制原版奶蛙左右移动接住烤串和鸡腿，躲避炸弹！</p>
+          </div>
+          <button id="btn-start-catch-food" class="py-2 px-4 bg-amber-400 hover:bg-amber-500 font-extrabold text-xs rounded-xl shadow">
+            开始接烤串
+          </button>
+        </div>
+
+        <div class="glass-panel p-4 border-2 border-amber-300 flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-base text-stone-900">💥 狂戳大肚皮手速王</h3>
+            <p class="text-xs text-stone-500 mt-1">12秒极速手速狂点奶蛙大白肚！测试你的极限点击次数！</p>
+          </div>
+          <button id="btn-start-poke-belly" class="py-2 px-4 bg-amber-400 hover:bg-amber-500 font-extrabold text-xs rounded-xl shadow">
+            开始狂戳
+          </button>
+        </div>
+      </div>
+
+      <!-- Game Play View -->
+      <div id="game-play-view" style="display: none;" class="my-2">
+        <div id="catch-food-wrapper" style="display: none;" class="flex flex-col items-center">
+          <canvas id="catch-food-canvas" width="460" height="340" class="rounded-2xl border-2 border-amber-300 shadow"></canvas>
+          <p class="text-xs text-stone-500 mt-2">提示：键盘 ← / → 或 A / D 左右奔跑，也可手机触屏拖动！</p>
+        </div>
+
+        <div id="poke-belly-wrapper" style="display: none;" class="flex flex-col items-center py-4">
+          <div class="flex items-center justify-between w-full px-4 mb-3">
+            <span id="poke-belly-timer" class="font-extrabold text-xl text-amber-600">⏱️ 12s</span>
+            <span id="poke-belly-score" class="font-bold text-sm text-stone-700">🔥 已点击: 0 次</span>
+          </div>
+          <button id="btn-belly-poke-target" type="button" class="belly-poke-btn">
+            <img id="belly-poke-img" src="/assets/nwp/idle.png" alt="奶蛙大白肚" class="belly-poke-img">
+            <span class="belly-poke-label">👉 狂点大白肚！</span>
+          </button>
+          <p class="text-xs text-stone-500 mt-2">提示：疯狂点击上方奶蛙的大白肚皮，每次点击都会切换爆笑姿势！</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Social & Leaderboard Modal -->
+  <div id="modal-social" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <h2 class="text-lg font-black text-stone-800 flex items-center gap-2">
+          <span>🏆 全服奶蛙名人堂</span>
+        </h2>
+        <button class="modal-close-btn text-stone-400 hover:text-stone-700 text-xl font-bold">✕</button>
+      </div>
+
+      <!-- Leaderboard Category Tabs -->
+      <div class="flex gap-2 my-3">
+        <button class="rank-tab-btn flex-1 py-1.5 rounded-xl bg-amber-400 font-bold text-xs text-stone-900 shadow-sm" data-rank="weightList">
+          ⚖️ 大肚王榜 (体重)
+        </button>
+        <button class="rank-tab-btn flex-1 py-1.5 rounded-xl bg-stone-100 font-semibold text-xs text-stone-600" data-rank="levelList">
+          ⭐ 高手榜 (等级)
+        </button>
+        <button class="rank-tab-btn flex-1 py-1.5 rounded-xl bg-stone-100 font-semibold text-xs text-stone-600" data-rank="likesList">
+          ❤️ 人气榜 (点赞)
+        </button>
+      </div>
+
+      <p class="text-xs text-stone-500 mb-2">点击任意玩家右侧的“串门访问”可进入对方房间戳肚皮点赞或投喂烤串~</p>
+
+      <!-- Leaderboard List -->
+      <div id="leaderboard-list" class="space-y-2 max-h-[45vh] overflow-y-auto mt-2">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Visit Friend's Room Modal -->
+  <div id="modal-visit-room" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <h2 id="visit-title" class="text-lg font-black text-stone-800">好友的奶蛙房间</h2>
+        <button class="modal-close-btn text-stone-400 hover:text-stone-700 text-xl font-bold">✕</button>
+      </div>
+
+      <div class="text-center my-4">
+        <div class="text-6xl my-2">🐸</div>
+        <p id="visit-pet-info" class="text-xs font-bold text-amber-700"></p>
+      </div>
+
+      <div class="flex gap-2 my-3">
+        <button id="btn-visit-poke" class="flex-1 py-2 bg-amber-400 hover:bg-amber-500 font-bold text-xs rounded-xl shadow">
+          👉 戳肚皮点赞 (+5币)
+        </button>
+        <button id="btn-visit-gift" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow">
+          🍢 投喂羊肉串 (花15币)
+        </button>
+      </div>
+
+      <div class="border-t border-stone-200 pt-3 mt-3">
+        <h4 class="font-bold text-xs text-stone-700 mb-2">📜 房间留言板</h4>
+        <div id="visit-guestbook-list" class="space-y-2 max-h-36 overflow-y-auto mb-2"></div>
+        <div class="flex gap-2">
+          <input id="visit-msg-input" type="text" placeholder="留下一句暖心的话吧..." class="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 text-xs focus:outline-none focus:border-amber-400">
+          <button id="btn-visit-msg-send" class="py-1.5 px-3 bg-stone-800 text-white font-bold text-xs rounded-xl">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Floating AI Chat Panel (API Keys Strictly Server-Side Encrypted / Env Only) -->
+  <div id="ai-chat-panel" class="hidden fixed bottom-20 md:bottom-24 right-4 md:right-8 w-80 md:w-96 glass-panel shadow-2xl p-4 flex flex-col z-50 border-2 border-amber-300">
+    <div class="flex items-center justify-between pb-2 border-b border-stone-200">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🐸💬</span>
+        <div>
+          <h3 class="font-extrabold text-sm text-stone-900">与小奶蛙 AI 畅聊</h3>
+          <span class="text-[10px] text-emerald-600 font-semibold">● 云端大模型驱动中</span>
+        </div>
+      </div>
+      <button onclick="document.getElementById('ai-chat-panel').classList.add('hidden')" class="text-stone-400 hover:text-stone-700 font-bold text-sm">✕</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chat-messages-box" class="h-64 overflow-y-auto space-y-2 py-3 pr-1 text-xs">
+      <div class="flex gap-2 justify-start">
+        <div class="max-w-[85%] p-3 rounded-2xl bg-white text-stone-800 border border-stone-200 rounded-bl-none shadow-sm">
+          呱哈哈！主人好呀~ 本蛙是你的本命小奶蛙，最喜欢吃烤肉串和拍肚皮大笑啦！今天想和本蛙聊点什么呢？
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <div class="flex gap-2 pt-2 border-t border-stone-200">
+      <input id="chat-input" type="text" placeholder="对奶蛙说点什么..." class="flex-1 px-3 py-2 rounded-xl border border-stone-300 text-xs focus:outline-none focus:border-amber-400">
+      <button id="chat-send-btn" class="py-2 px-3 bg-amber-400 hover:bg-amber-500 font-bold text-xs rounded-xl shadow text-stone-900">发送</button>
+    </div>
+  </div>
+
+  <!-- 6. Authentication Modal -->
+  <div id="modal-auth" class="modal-backdrop">
+    <div class="modal-content text-center relative">
+      <button id="btn-close-auth" class="modal-close-btn absolute top-4 right-5 text-stone-400 hover:text-stone-700 text-xl font-bold" title="关闭">✕</button>
+      <div class="w-16 h-16 rounded-3xl bg-amber-300 mx-auto flex items-center justify-center text-3xl shadow-md mb-2">
+        🐸
+      </div>
+      <h2 class="text-xl font-black text-stone-800">欢迎来到奶蛙乐园！</h2>
+      <p class="text-xs text-stone-500 mt-1 mb-4">登录或一键免登录开启属于你的黄身白肚萌宠之旅~</p>
+
+      <button id="btn-guest-login" class="w-full py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 font-extrabold text-sm rounded-xl shadow text-stone-900 mb-4">
+        ✨ 一键免密快速体验 (自动领养小奶蛙)
+      </button>
+
+      <div class="flex items-center gap-2 my-2 text-xs text-stone-400">
+        <div class="flex-1 border-t border-stone-200"></div>
+        <span>或者账号登录/注册</span>
+        <div class="flex-1 border-t border-stone-200"></div>
+      </div>
+
+      <div class="space-y-2 text-left my-3 text-xs">
+        <div>
+          <label class="font-bold text-stone-700">用户名:</label>
+          <input id="auth-username" type="text" placeholder="输入用户名" class="w-full mt-1 px-3 py-1.5 rounded-lg border border-stone-300 focus:outline-none focus:border-amber-400">
+        </div>
+        <div>
+          <label class="font-bold text-stone-700">密码:</label>
+          <input id="auth-password" type="password" placeholder="输入密码" class="w-full mt-1 px-3 py-1.5 rounded-lg border border-stone-300 focus:outline-none focus:border-amber-400">
+        </div>
+
+        <div id="auth-register-extra" style="display: none;" class="space-y-2 pt-2 border-t border-stone-200">
+          <div>
+            <label class="font-bold text-stone-700">你的主人昵称:</label>
+            <input id="auth-nickname" type="text" placeholder="例如：烤串特工" class="w-full mt-1 px-3 py-1.5 rounded-lg border border-stone-300">
+          </div>
+          <div>
+            <label class="font-bold text-stone-700">给奶蛙起个大名:</label>
+            <input id="auth-petname" type="text" placeholder="例如：大肚小霸王" class="w-full mt-1 px-3 py-1.5 rounded-lg border border-stone-300">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input id="auth-is-register" type="checkbox" class="rounded text-amber-500">
+          <label for="auth-is-register" class="text-xs text-stone-600 font-semibold cursor-pointer">没有账号？勾选切换为新用户注册</label>
+        </div>
+      </div>
+
+      <button id="auth-submit-btn" class="w-full py-2 bg-stone-800 hover:bg-stone-900 text-white font-bold text-xs rounded-xl shadow mt-2">
+        登录
+      </button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/js/minigames.js"></script>
+  <script src="/js/pet2d.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

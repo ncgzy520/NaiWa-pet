@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+*.enc
+data/
+codex-pet-naiwa-repo/
+nailong_2d_demo.jpg
+*.zip
+.DS_Store
+Thumbs.db

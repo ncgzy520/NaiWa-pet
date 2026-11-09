@@ -17,7 +17,6 @@ app.use(express.json());
 // Static file hosting
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets/nwp', express.static(path.join(__dirname, 'naiwa-assets')));
-app.use('/assets/codex', express.static(path.join(__dirname, 'codex-pet-naiwa-repo/codex-pet-naiwa-main/naifrog')));
 
 // Shop catalog configuration (Pure Food & Snacks — Cosmetics/Themes Removed)
 const SHOP_CATALOG = {

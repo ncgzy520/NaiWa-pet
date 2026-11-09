@@ -586,19 +586,28 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
   let replyText = '';
   const secrets = loadSecrets();
 
-  // 1. Server-side Azure OpenAI
-  const azureEndpoint = secrets.AZURE_OPENAI_ENDPOINT;
-  const azureKey = secrets.AZURE_OPENAI_API_KEY;
+  // 1. Server-side Azure OpenAI / Azure AI Foundry (DeepSeek / GPT via Azure credits)
+  const azureEndpoint = secrets.AZURE_AI_ENDPOINT || secrets.AZURE_OPENAI_ENDPOINT;
+  const azureKey = secrets.AZURE_AI_KEY || secrets.AZURE_OPENAI_API_KEY;
   const azureDeployment = secrets.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini';
 
   if (azureEndpoint && azureKey) {
     try {
-      const url = `${azureEndpoint.replace(/\/$/, '')}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-02-15-preview`;
+      let url = azureEndpoint.trim().replace(/\/$/, '');
+      const isFoundryMaaS = url.includes('.models.ai.azure.com') || url.includes('.inference.ai.azure.com') || url.includes('/chat/completions');
+
+      if (!isFoundryMaaS) {
+        url = `${url}/openai/deployments/${azureDeployment}/chat/completions?api-version=2024-02-15-preview`;
+      } else if (!url.endsWith('/chat/completions')) {
+        url = url.endsWith('/v1') ? `${url}/chat/completions` : `${url}/v1/chat/completions`;
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'api-key': azureKey
+          'api-key': azureKey,
+          'Authorization': `Bearer ${azureKey}`
         },
         body: JSON.stringify({
           messages: [
@@ -614,7 +623,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         replyText = data.choices[0].message.content.trim();
       }
     } catch (e) {
-      console.warn('Azure OpenAI call failed, falling back.');
+      console.warn('Azure AI / OpenAI call failed, falling back:', e.message);
     }
   }
 

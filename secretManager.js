@@ -37,9 +37,11 @@ function encryptSecrets(secretsObj) {
 
 function loadSecrets() {
   const result = {
-    AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT || '',
-    AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY || '',
+    AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT || process.env.AZURE_AI_ENDPOINT || '',
+    AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY || process.env.AZURE_AI_KEY || '',
     AZURE_OPENAI_DEPLOYMENT: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini',
+    AZURE_AI_ENDPOINT: process.env.AZURE_AI_ENDPOINT || '',
+    AZURE_AI_KEY: process.env.AZURE_AI_KEY || '',
     DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY || '',
     GEMINI_API_KEY: process.env.GEMINI_API_KEY || ''
   };
